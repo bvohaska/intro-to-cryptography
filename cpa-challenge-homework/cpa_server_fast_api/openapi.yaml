@@ -1,0 +1,399 @@
+openapi: 3.0.0
+info:
+  contact:
+    email: brian@vohaska.com
+    name: Brian Vohaska or Daniel Apon
+    url: https://ineedrandom.com
+  description: Students as a CPA adversary will attempt to defeat the CPA challenger
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  title: CPA Challenge Server
+  version: 1.0.0
+servers:
+- url: https://ineedrandom.com
+- url: http://localhost:8080
+tags:
+- description: API access to the Oracle
+  name: Encryption Oracle
+- description: APIs for the CPA game
+  name: CPA Challenger
+paths:
+  /oracle:
+    post:
+      description: Ask the encryption oracle to encrypt any 256-bit hex encoded string.
+        Ask as many questions as you'd like but please don't overload the server.
+        You will have a unique password given to you by the professor
+      requestBody:
+        content:
+          application/json:
+            examples:
+              oracle_example_1:
+                $ref: '#/components/examples/oracle_request_example_1'
+              oracle_example_2:
+                $ref: '#/components/examples/oracle_request_example_2'
+            schema:
+              $ref: '#/components/schemas/Oracle_request'
+        description: Description of a question to the oracle
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Oracle_response'
+          description: Successful Oracle Response
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unexpected error
+      summary: The Encryption Oracle
+      tags:
+      - Encryption Oracle
+  /challenges:
+    post:
+      description: Attempt to defeat the CPA challenger; submit 10 sets of 2 messages
+        receive 10 challenges
+      requestBody:
+        content:
+          application/json:
+            examples:
+              challenge_example:
+                $ref: '#/components/examples/challenge_request'
+            schema:
+              $ref: '#/components/schemas/Challenge_request'
+        description: Challenge API request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge_response'
+          description: Challenge API response
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unexpected error
+      summary: The CPA Challenger
+      tags:
+      - CPA Challenger
+  /decision:
+    post:
+      description: Convince the CPA challenger that you can distinguish between valid
+        ciphertexts and random strings. You must submit 10 challenges from the challenges
+        API and submit if they are ciphertexts or random strings.
+      requestBody:
+        content:
+          application/json:
+            examples:
+              decision_example_1:
+                $ref: '#/components/examples/decision_example_1'
+            schema:
+              $ref: '#/components/schemas/Decision_request'
+        description: Description of a decision request
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Decision_response'
+          description: Decision Response
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: unexpected error
+      summary: Make a decision about challenges
+      tags:
+      - CPA Challenger
+components:
+  examples:
+    oracle_request_example_1:
+      value:
+        password: 35dea77adb321f771d52673752756176
+        oracle_message: 6b7f198df6f89a5291f6daccdd619ed17bd9868daa359a9ee958a24bc31b7204
+    oracle_request_example_2:
+      value:
+        password: 35dea77adb321f771d52673752756176
+        oracle_message: 109bebc3fc393dbf3db129c3b91958b11cca2a3d376c598d3cf0ce55656db4c0
+    challenge_request:
+      value:
+        password: 35dea77adb321f771d52673752756176
+        messages:
+        - - b4635db79385988d2fae58307165ac31bdc14366b8f18af9d2ec71d59fdee841
+          - e3c00f29744096dd52076f91e9fc63cef3e3db307d14941df91c457b98395d96
+        - - e91cc7eb7878c23ba1e1e9298db00e8cbe2d3af2bda52ebd16f38c6a0b79407c
+          - 2de1d771bcccdf9894b4aa58138e853786addf7c200d3a348505268d1aefdafb
+        - - 1d01d2ce838900c59cdb6eee851b6c9dcc90a93d4a6df42a14fa055874fb70e2
+          - 2bd2f34711013bf59dcf29993bba0698777380f12113a36cbed36a0da472f5c2
+        - - 83223f454b20c78b38c4a402498f20f2e850a32ac72df5053d39fe249f860107
+          - 6f95f6f9a283a46e94b4535c9fe6e0de27e2e472b389ea6646732206eedde334
+        - - 2fe907c86803473ee995a1753ec0f84c3af0dccdc60e99c8df3b5b073de9714c
+          - 8b0e07add1379ee5285eeb162ad945d2f1c41fd4f6688ba9c0b82012a1723a64
+        - - 3c36d32820c8683c4a4fbbe29859455cfbee415123ed7724e5c6f65a71dc3d6d
+          - f6e9d7c694b8df7f5ccb119f68bae8b90a57c415a6e1ea728a0199a52de51bc4
+        - - e565efe9901db9b034fbe8de1e4ba638a710432c476d30b50bce071b8e1af8b2
+          - df14868115cbe044d8556630a05b708ff90af25de3987b51a337bd242fe1ce9f
+        - - 0c723401ad1dbad000c4ab820dd78e6b230cd673252edf34933753d477e5cbb6
+          - 8b0320551ee0a54b965052b92befbfb2030c88dc3adf1cba98fa4985966caf5c
+        - - 4a4c71f40732ca86760c0176cb6a97d548054e69371acee0f8a1c639c9035147
+          - 9b2b2da8605a14449bd6a7718e6da61cf01da749f17ad94040e22aff177f1cf6
+        - - 43e84f8be0f7aa154757c5fa298a4347f682007d32003f92181abc18243cfa7c
+          - 7dd9a613df2a912ee7015e5b8d1cc37b09930f2e19131db7d8ded5260006ec33
+    decision_example_1:
+      value:
+        password: 35dea77adb321f771d52673752756176
+        decisions:
+        - ciphertext:
+            random_nonce: 8c5301042b48d4c2936a1e9d5a01f554
+            c1: 38fbf264b6f11780e2cee8b0cb859015
+            c2: d0df1c09adc60b1b6ed5dee2da459a5f
+          decision: 1
+        - ciphertext:
+            random_nonce: 1f7aa76bf6ee0b805852ab4c068c1909
+            c1: 4f32825fb8294f84beb5245ed28b1e8d
+            c2: e27f1fe9a074368d0ddb677adf5e2bba
+          decision: 2
+        - ciphertext:
+            random_nonce: 11c9faad5319374653a86de6da7256aa
+            c1: 2936bdf1e5f45ecfdaadc8fee44beac0
+            c2: 7f214966c183b079c62b429f5bdfc065
+          decision: 2
+        - ciphertext:
+            random_nonce: 1006f9d3a20ed1ed12e603aee4338ced
+            c1: 056f0c2720f02dece8804d369b2502ce
+            c2: 35f4ad82a67f773a0bea3ab28cfa8938
+          decision: 1
+        - ciphertext:
+            random_nonce: 44f5ada164e70aeabaa939b6012cf462
+            c1: 2d49ffdacfdb68f7e0b622215a412bc7
+            c2: b3a2736ba887ef82647f46560da88d20
+          decision: 2
+        - ciphertext:
+            random_nonce: 84eaf49615d3e5e5c73ca9e5ea499454
+            c1: cbe3a5efa9f28e026887517fe90f4bd9
+            c2: 1d36ca790374751985ca8a0ecc58ea86
+          decision: 2
+        - ciphertext:
+            random_nonce: a97de9dd09f40ffe2602f75aacb68508
+            c1: 4e46955d744402094ecf6b9aee51100d
+            c2: 89682ee3f761c3456bfa5b1e57d2bbd3
+          decision: 1
+        - ciphertext:
+            random_nonce: e0d85f8e702c9878e49c04090629f3ec
+            c1: cbc115c9d6d0c0c7f09a96a97afdd62b
+            c2: 306f6b68bc06b15035f3b185b871351f
+          decision: 1
+        - ciphertext:
+            random_nonce: f677ee463df4416cca17884ea03db22d
+            c1: d740797a77d1d079e946920523d3d6f1
+            c2: 4cba9ccc97daa6df917815136ab0fdba
+          decision: 2
+        - ciphertext:
+            random_nonce: cf1e4521b253a307711c4d35eb01920d
+            c1: 84efd793b3146daaedc55b539830a3a9
+            c2: 019659ddf1a7b3c6cebbdca57ba60470
+          decision: 2
+  schemas:
+    Password:
+      description: 128-bit hex encoded string given by the professor
+      example: 35dea77adb321f771d52673752756176
+      maxLength: 32
+      minLength: 32
+      title: password
+      type: string
+    Message:
+      description: 256-bit hex encoded string
+      example: 6b7f198df6f89a5291f6daccdd619ed17bd9868daa359a9ee958a24bc31b7204
+      maxLength: 64
+      minLength: 64
+      title: Message
+      type: string
+    Ciphertext:
+      description: Data structure for a ciphertext returned from an Encryption Oracle
+      example:
+        random_nonce: 46dad2d3c0b4e907220b7c02859f7e7a
+        c1: aaff8f9cea9b301a06337c7caae647ff
+        c2: eb2ef5f18369247bf1120da57f8464ad
+      properties:
+        random_nonce:
+          example: e6dad2d3c0b4e907220b7c02859f7e7d
+          maxLength: 32
+          minLength: 32
+          type: string
+        c1:
+          example: ebff8f9cea9b301a06337c7caae647ff
+          maxLength: 32
+          minLength: 32
+          type: string
+        c2:
+          example: e62ef5f18369247bf1120da57f8464ad
+          maxLength: 32
+          minLength: 32
+          type: string
+      required:
+      - c1
+      - c2
+      - random_nonce
+      title: Ciphertext
+      type: object
+    Decision:
+      example:
+        ciphertext:
+          random_nonce: bbdad2d3c0b4e907220b7c02859f7e7a
+          c1: bbff8f9cea9b301a06337c7caae647ff
+          c2: bb2ef5f18369247bf1120da57f8464ad
+        decision: 1
+      properties:
+        ciphertext:
+          $ref: '#/components/schemas/Ciphertext'
+        decision:
+          example: 1
+          type: integer
+      required:
+      - ciphertext
+      - decision
+      title: Decision
+      type: object
+    Oracle_request:
+      properties:
+        password:
+          description: 128-bit hex encoded string given by the professor
+          example: 35dea77adb321f771d52673752756176
+          maxLength: 32
+          minLength: 32
+          title: password
+          type: string
+        oracle_message:
+          description: 256-bit hex encoded string
+          example: 6b7f198df6f89a5291f6daccdd619ed17bd9868daa359a9ee958a24bc31b7204
+          maxLength: 64
+          minLength: 64
+          title: Message
+          type: string
+      required:
+      - oracle_message
+      title: Oracle_request
+      type: object
+    Oracle_response:
+      example:
+        ciphertext:
+          random_nonce: 46dad2d3c0b4e907220b7c02859f7e7a
+          c1: aaff8f9cea9b301a06337c7caae647ff
+          c2: eb2ef5f18369247bf1120da57f8464ad
+      properties:
+        ciphertext:
+          $ref: '#/components/schemas/Ciphertext'
+      required:
+      - ciphertext
+      title: Oracle_response
+      type: object
+    Challenge_request:
+      properties:
+        password:
+          description: 128-bit hex encoded string given by the professor
+          example: 35dea77adb321f771d52673752756176
+          maxLength: 32
+          minLength: 32
+          title: password
+          type: string
+        messages:
+          items:
+            items:
+              $ref: '#/components/schemas/Message'
+            maxItems: 2
+            minItems: 2
+            type: array
+          maxItems: 10
+          minItems: 10
+          title: messages
+          type: array
+      required:
+      - messages
+      - password
+      title: Challenge_request
+      type: object
+    Challenge_response:
+      example:
+        ciphertexts:
+        - random_nonce: 46dad2d3c0b4e907220b7c02859f7e7a
+          c1: aaff8f9cea9b301a06337c7caae647ff
+          c2: eb2ef5f18369247bf1120da57f8464ad
+        - random_nonce: 46dad2d3c0b4e907220b7c02859f7e7a
+          c1: aaff8f9cea9b301a06337c7caae647ff
+          c2: eb2ef5f18369247bf1120da57f8464ad
+        - random_nonce: 46dad2d3c0b4e907220b7c02859f7e7a
+          c1: aaff8f9cea9b301a06337c7caae647ff
+          c2: eb2ef5f18369247bf1120da57f8464ad
+        - random_nonce: 46dad2d3c0b4e907220b7c02859f7e7a
+          c1: aaff8f9cea9b301a06337c7caae647ff
+          c2: eb2ef5f18369247bf1120da57f8464ad
+        - random_nonce: 46dad2d3c0b4e907220b7c02859f7e7a
+          c1: aaff8f9cea9b301a06337c7caae647ff
+          c2: eb2ef5f18369247bf1120da57f8464ad
+      properties:
+        ciphertexts:
+          items:
+            $ref: '#/components/schemas/Ciphertext'
+          maxItems: 10
+          minItems: 10
+          title: ciphertexts
+          type: array
+      required:
+      - ciphertexts
+      title: Challenge_response
+      type: object
+    Decision_request:
+      properties:
+        password:
+          description: 128-bit hex encoded string given by the professor
+          example: 35dea77adb321f771d52673752756176
+          maxLength: 32
+          minLength: 32
+          title: password
+          type: string
+        decisions:
+          items:
+            $ref: '#/components/schemas/Decision'
+          title: decisions
+          type: array
+      required:
+      - decisions
+      title: Decision_request
+      type: object
+    Decision_response:
+      example:
+        success: success
+        proof_of_completion: proof_of_completion
+      properties:
+        success:
+          title: success
+          type: string
+        proof_of_completion:
+          title: proof_of_completion
+          type: string
+      required:
+      - success
+      title: Decision_response
+      type: object
+    Error:
+      properties:
+        code:
+          format: int32
+          title: code
+          type: integer
+        message:
+          title: message
+          type: string
+      required:
+      - code
+      - message
+      title: Error
+      type: object
