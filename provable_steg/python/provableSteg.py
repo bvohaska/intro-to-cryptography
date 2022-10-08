@@ -61,7 +61,13 @@ def encodeSteg(
     enc_message_bytes = steg.encryptMessage(key, hiddentext + terminator)
     ciphertext_bits = steg.messageToBitArray(enc_message_bytes)
 
+    # Convert the ciphertext bits into several x-bit blocks (as an iterable)
     ciphertext_bits = zip(*(iter(ciphertext_bits),) * bits_per_message)
+
+    # Number of blocks to encode
+    number_of_blocks = 8*len(enc_message_bytes)/bits_per_message
+
+    print(f"Number of {bits_per_message}-bit blocks to encode: {number_of_blocks}")
 
     for index, target_bits in enumerate(ciphertext_bits):
 
@@ -70,6 +76,8 @@ def encodeSteg(
 
         if debug:
             print(f"Index: {index}")
+
+        print(f"Block {index} of {number_of_blocks} encoded")
 
     return output_ciphertexts
 
@@ -132,16 +140,29 @@ def test_encode_decode_regression():
 
 if __name__ == "__main__":
 
-    key = bytes.fromhex('de61390bf6b82420359c9eb4d8d82882762f0514503b72ec469503aba97fd0cf')
-    oracle = steg.Dumb_Oracle()
-    oracle.load_tweets()
-    bits_per_message = 8
+    # Set a hiddentext message that we want to encode in a set of tweets
+    hiddentext = "Attack at dawn"
+    # Set a terminator that we will use to show the end of the message (not strictly necessary)
+    terminator = "000"
 
-    ciphertexts = encodeSteg(key, "Attack at dawn", "000", oracle, bits_per_message)
+    # Load or create a key that we will use for steg
+    key = bytes.fromhex('de61390bf6b82420359c9eb4d8d82882762f0514503b72ec469503aba97fd0cf')
+    # Set the number of bits of hiddentext to be encoded in a message
+    bits_per_message = 12
+
+    # Our message channel is the set of elon musk tweets. Load these tweets into our dumb oracle
+    oracle = steg.Dumb_Oracle()
+    oracle.load_tweets(path='elonmusk_tweets_big.json')
+    print(f"The number of tweets currently loaded is: {len(oracle.history)}")
+
+    # Encode the hiddentext into a channel message. We don't timestamp these and our 
+    # oracle is dumb so this isn't stricly secure.
+    ciphertexts = encodeSteg(key, hiddentext, terminator, oracle, bits_per_message)
 
     print(f"Number of ciphertexts needed to send the hiddentext: {len(ciphertexts)}")
 
-    decoded_message = decodeSteg(key, ciphertexts, "000", bits_per_message)
+    # Recover the hiddentext from the set of ciphertext messages
+    decoded_message = decodeSteg(key, ciphertexts, terminator, bits_per_message)
 
     print(f"Recovered hiddentext: {decoded_message.decode('ascii')}")
 

@@ -7,7 +7,7 @@ from secrets import randbits, choice
 
 
 # Standard text encoding for byte encoding and decoding
-text_encoding = 'ascii'
+text_encoding = 'utf-8' #'ascii'
 
 
 class Dumb_Oracle():
