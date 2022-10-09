@@ -27,39 +27,43 @@ def decodeSteg(key: bytes,
     """
     encrypted_message = []
     for ciphertext in ciphertext_list:
-        if hiddentext_encoding != None:
-            ciphertext = ciphertext.encode(hiddentext_encoding)
         encrypted_message.extend(steg.stegPRF(key, bits_per_message, ciphertext))
 
     encrypted_message = bitarray(encrypted_message)
-
     if debug:
         print(f"In decodeSteg - Received Encrypted Mesage (hex): {encrypted_message.tobytes().hex()}")
 
-    # decrypt
+    # Recover Hiddentext
     hiddentext = steg.decryptMessage(key, encrypted_message.tobytes(), cipher_mode=cipher_mode)
-    if hiddentext_encoding != None:
-        readable_text = hiddentext.decode(hiddentext_encoding)
 
     if terminator == "":
-        return readable_text
+        if hiddentext_encoding == None:
+            return hiddentext
+        else:
+            return hiddentext.decode(hiddentext_encoding)
 
-    if hiddentext_encoding == None:
+    # Encode the terminator into binary
+    if hiddentext_encoding != None:
         terminator = terminator.encode(hiddentext_encoding)
 
-    # TODO: BUG - there is a bug here where the end of the terminator 
-    # string is found and removed but not the beginning. This may have
-    # to do with python enforcing byte boundaries around the hiddentext 
-    # messages that may have: BLOCK_SIZE_BITS mod 8 != 0. Tests show that
-    # Python will pad the partial byte with data (maybe random-ish?). Since
-    # this only affects our last byte we may concentrate a bug fix on that
-    # final byte. (Or use a language with better bit manipulation :-/)
-    # UPDATE: This is a bit/byte boundary issue. Python has trouble with strings
-    # that have less than 8 bits per byte. This is a problem when decoding with
-    # GCM and using bits/message that is not divisable by 8
-    readable_text = readable_text[:readable_text.find(terminator)]
+    # Search the binary
+    # TODO: BUG - There is a bits/Enc(hiddentext) & bits/ciphertext boundary issue. 
+    # B/c allow variable bits/Enc(hiddentext) we would need to inform the decoding 
+    # routine how many bits/hiddentext we will be using. but we dont. When a 
+    # hiddentext is not exactly divisable by "bits/ciphertext", the PRF routine 
+    # will pad the last ciphertext with extra bits. Normally, we could just 
+    # remove the extra bits with a message terminator but this presents a problem
+    # when decoding with GCM and using a Enc(hiddentext) that is not divisable by 
+    # bits/ciphertext (we can't put the Enc(...) length in the stegotext). One way 
+    # to solve this for AE modes is to ensure bits/ciphertext | len(Enc(hiddentext)).
+    # To make this more complicated, python forces byte boundaries on variables which
+    # means that we also need Enc(...) | 8.
+    hiddentext = hiddentext[:hiddentext.find(terminator)]
+
+    if hiddentext_encoding != None:
+        return hiddentext.decode(hiddentext_encoding)
     
-    return readable_text
+    return hiddentext
 
 
 def encodeSteg(
@@ -86,9 +90,11 @@ def encodeSteg(
     Returns:
         list: A list of ciphertexts messages with stegotext in them
     """
-    enc_message_bytes = steg.encryptMessage(key, (hiddentext+terminator).encode('utf-8'), cipher_mode=cipher_mode)
+    padded_text = steg.padMessage(hiddentext+terminator, bits_per_message, ciphertext_encoding, cipher_mode)
+    enc_message_bytes = steg.encryptMessage(key, padded_text, cipher_mode=cipher_mode)
     ciphertext_bits = steg.messageToBitArray(enc_message_bytes)
     number_of_blocks_to_encode = 8*len(enc_message_bytes)/bits_per_message
+    print(f"Number of encrypted message bits: {8*len(enc_message_bytes)}")
     
     if debug:
         print("In encodeSteg")
@@ -99,11 +105,18 @@ def encodeSteg(
     # Convert the ciphertext bits into several x-bit blocks
     ciphertext_bits = steg.splitBitArrayIntoChunks(ciphertext_bits, bits_per_message, debug)
 
+    # Find messages drawn from a channel that PRF to our target bit (1 tweet / ciphertext_bits)
     output_ciphertexts = []
     for index, target_bits in enumerate(ciphertext_bits):
 
-        # Find messages drawn from a channel that PRF to our target bit (1 tweet / ciphertext_bits)
-        ciphertext = rejectionSampler(key, bitarray(list(target_bits)), oracle, bits_per_message,ciphertext_encoding, debug)
+        ciphertext = rejectionSampler(
+            key, 
+            bitarray(list(target_bits)), 
+            oracle, 
+            bits_per_message,
+            ciphertext_encoding, 
+            debug
+        )
         output_ciphertexts.append(ciphertext)
 
         print(f"\tCompleted Block {index+1} of {number_of_blocks_to_encode}")
@@ -189,9 +202,10 @@ if __name__ == "__main__":
 
     # Set a hiddentext message that we want to encode in a set of tweets
     hiddentext = "Attack at dawn"
+    text_encoding = 'utf-8'
 
     # Set a terminator that we will use to show the end of the message (not strictly necessary)
-    terminator = ""
+    terminator = "XJ"
 
     path = 'cipherTweets.json'
 
@@ -200,7 +214,7 @@ if __name__ == "__main__":
     block_mode = 'GCM'
 
     # Set the number of bits of hiddentext to be encoded in a message
-    bits_per_message = 8
+    bits_per_message = 10
 
     # Our message channel is the set of elon musk tweets. Load these tweets into our dumb oracle
     oracle = steg.Dumb_Oracle()
@@ -215,7 +229,7 @@ if __name__ == "__main__":
         terminator, 
         oracle, 
         bits_per_message, 
-        'utf-8', 
+        text_encoding, 
         block_mode, 
         debug=False
     )
@@ -225,10 +239,10 @@ if __name__ == "__main__":
     # Recover the hiddentext from the set of ciphertext messages
     decoded_message = decodeSteg(
         key, 
-        ciphertexts, 
+        [str_message.encode(text_encoding) for str_message in ciphertexts], 
         terminator, 
         bits_per_message, 
-        'utf-8', 
+        text_encoding, 
         block_mode, 
         debug=True
     )

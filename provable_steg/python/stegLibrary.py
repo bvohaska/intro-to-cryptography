@@ -182,23 +182,49 @@ def messageToBitArray(message: str) -> bitarray:
     return message_bits
 
 
-def padMessage(message: str, bits_per_message: int, text_encoding:str = None) -> bytes:
+def padMessage(
+    message: str, 
+    bits_per_message: 
+    int, text_encoding: str = None, 
+    cipher_mode: str = 'CTR', 
+    iv_size_bits = 128,
+    debug: bool = True) -> bytes:
     
     if text_encoding != None:
         message = message.encode(text_encoding)
 
+    extra_bits = 0
+    # Add extra bits due to the AE TAG
+    if cipher_mode == 'GCM':
+        extra_bits = 128
+
     message_bits = bitarray()
     message_bits.frombytes(message)
+    if debug:
+        print(f"Number of message bits: {len(message_bits)}")
+        print(f"Number of bits/message: {bits_per_message}")
 
-    number_of_bits_in_array = len(message_bits)
-    padding_bits = bits_per_message - (number_of_bits_in_array % bits_per_message)
+    number_of_bits_in_array = len(message_bits) + extra_bits + iv_size_bits
+    if debug:
+        print(f"Number of encrypted message bits: {number_of_bits_in_array}")
+
+    padding_bits = bits_per_message - number_of_bits_in_array % bits_per_message
+    if debug:
+        print(f"Initial number of padding bits: {padding_bits}")
+
+    # Make sure the padding hits a byte boundary
+    while (padding_bits + number_of_bits_in_array)%8 != 0:
+         padding_bits += 10
     
-    print(len(message_bits))
-    print(padding_bits)
-    message_bits += padding_bits * bitarray('0')
-    print(len(message_bits))
 
-    assert len(message_bits) % bits_per_message == 0
+    message_bits += padding_bits * bitarray('0')
+    if debug:
+        print(f"Number of padding bits: {padding_bits}")
+        print(f"bits/msg | bits in the calculated encrypted array: {number_of_bits_in_array % bits_per_message}")
+        print(f"New number of message bits after padding: {len(message_bits)}")
+        print(f"Number of total bits in the array: {number_of_bits_in_array + padding_bits}")
+
+    assert (number_of_bits_in_array + padding_bits) % bits_per_message == 0
 
     return message_bits.tobytes()
 
