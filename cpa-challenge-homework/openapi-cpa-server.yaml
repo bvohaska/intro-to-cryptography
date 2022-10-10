@@ -1,7 +1,7 @@
 openapi: "3.0.0"
 info:
   version: 1.0.0
-  title: CPA Challenge Server
+  title: Homework Challenge Server
   description: Students as a CPA adversary will attempt to defeat the CPA challenger
   contact:
     name: Brian Vohaska or Daniel Apon
@@ -15,36 +15,58 @@ servers:
   - url: https://ineedrandom.com
   - url: http://localhost:8080
 tags:
-  - name: Encryption Oracle
-    description: API access to the Oracle
-  - name: CPA Challenger
+  - name: CPA Challenger - HW2a
     description: APIs for the CPA game
+  - name: Padding Oracle Challenge - HW2b
+    description: APIs for the CCA game
+  - name: Server Welcome
+    description: Default landing page for the server
 
 paths:
 
   /:
     get:
-      summary: The Encryption Oracle
+      summary: Default landing page
       description:
         Ask the encryption oracle to encrypt any 256-bit hex encoded string. Ask as many questions as you'd like
         but please don't overload the server. You will have a unique password given to you by the professor
       tags:
-        - Encryption Oracle
-      parameters:
-        - name: limit
-          in: query
-          description: How many items to return at one time (max 100)
-          required: false
-          schema:
-            type: integer
-            format: int32
+        - Server Welcome
       responses:
         '200':
-          description: Successful Oracle Response
+          description: Welcomes you to the server
+          content:
+            text/plain:
+              schema:
+                type: string
+        default:
+          description: unexpected error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Oracle_response'
+                $ref: '#/components/schemas/Error'
+
+  /paddingoracle:
+    post:
+      summary: The Padding Oracle - POST requests
+      description:
+        Ask the padding oracle to decrypt a ciphertext.
+      tags:
+        - Decryption Oracle
+      requestBody:
+        description: Description of a question to the decryption oracle
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Decryption_oracle_request'
+      responses:
+        '200':
+          description: Successful Decryption Oracle Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Decryption_oracle_response'
         default:
           description: unexpected error
           content:
@@ -54,7 +76,7 @@ paths:
 
   /oracle:
     post:
-      summary: The Encryption Oracle
+      summary: CPA Challenger
       description:
         Ask the encryption oracle to encrypt any 256-bit hex encoded string. Ask as many questions as you'd like
         but please don't overload the server. You will have a unique password given to you by the professor
@@ -72,7 +94,6 @@ paths:
                 $ref: "#/components/examples/oracle_request_example_1"
               oracle_example_2:
                 $ref: "#/components/examples/oracle_request_example_2"
-
       responses:
         '200':
           description: Successful Oracle Response
@@ -290,6 +311,20 @@ components:
         proof_of_completion:
           type: string 
 
+    Decryption_oracle_request:
+      type: object
+      required:
+        - ciphertext
+        - iv
+      properties:
+        ciphertext:
+          type: string
+        iv:
+          type: string
+
+    Decryption_oracle_response:
+      type: string
+    
     Error:
       type: object
       required:

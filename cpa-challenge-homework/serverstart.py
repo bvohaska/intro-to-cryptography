@@ -1,8 +1,10 @@
 import uvicorn
+from uvicorn.config import LOGGING_CONFIG
 
 deploy_port = 443
 
 if __name__ == "__main__":
+    LOGGING_CONFIG["formatters"]["default"]["fmt"] = "%(asctime)s [%(name)s] %(levelprefix)s %(message)s"
     uvicorn.run(
                "openapi_server.main:app",
                host="0.0.0.0",
