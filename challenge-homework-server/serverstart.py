@@ -1,3 +1,7 @@
+"""
+   This script must be run from the cpa_server_fast_api/src directory. The FastAPI 
+   libraries rely on relative imports that rely on running from that directory.
+"""
 import uvicorn
 from uvicorn.config import LOGGING_CONFIG
 
