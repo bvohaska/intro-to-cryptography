@@ -1,7 +1,6 @@
 """
 """
 from bitarray import bitarray
-from math import ceil
 import stegLibrary as steg
 
 

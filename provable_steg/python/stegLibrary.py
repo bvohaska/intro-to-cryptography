@@ -188,7 +188,7 @@ def padMessage(
     int, text_encoding: str = None, 
     cipher_mode: str = 'CTR', 
     iv_size_bits = 128,
-    debug: bool = True) -> bytes:
+    debug: bool = False) -> bytes:
     
     if text_encoding != None:
         message = message.encode(text_encoding)
