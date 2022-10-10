@@ -9,7 +9,7 @@ def encrypt():
     """Encrypts a message using AES256-CBC mode with PKCS7 padding
 
     Returns:
-        bytes: padded and encrypted message
+        tuple {hex}: iv and the encrypted message
     """
     plain_text = b'SomethingSomethingSomethingSomethingSomething'
     enc_cipher = AES.new(KEY, AES.MODE_CBC, IV)
@@ -22,7 +22,8 @@ def decrypt(h_iv, h_ct):
     the padding is valid
 
     Args:
-        cipher_text {bytes}: the hex string to be decrypted
+        h_iv {hex string}: the iv as a hex string
+        h_ct {hex string}: the hex string to be decrypted
 
     Returns:
         String: Valid or Invalid
