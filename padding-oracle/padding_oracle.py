@@ -1,23 +1,43 @@
-from Crypto.Util.Padding import pad, unpad
-from Crypto.Cipher import AES
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
+from typing import Tuple
 
 KEY = bytes.fromhex('9a1d33c0d9433f9faa77249fd19dd7fa678e41fb99617e1d782a975311b17770')
 IV = bytes.fromhex('26d1634eca6a0222fcff1f6d7bc87ddd')
-BLOCK_SIZE = 16
+BLOCK_SIZE_BYTES = 16
 
-def encrypt():
+
+def encrypt(
+    key: bytes = KEY, 
+    iv: bytes = IV, 
+    blocksize_bytes: int = BLOCK_SIZE_BYTES,
+    debug: bool = False) -> Tuple[str, str]:
     """Encrypts a message using AES256-CBC mode with PKCS7 padding
 
     Returns:
         tuple {hex}: iv and the encrypted message
     """
-    plain_text = b'SomethingSomethingSomethingSomethingSomething'
-    enc_cipher = AES.new(KEY, AES.MODE_CBC, IV)
-    padded_plain_text = pad(plain_text, BLOCK_SIZE)
-    cipher_text = enc_cipher.encrypt(padded_plain_text)
-    return (IV.hex(), cipher_text.hex())
+    plain_text = b'Came whiffling through the tulgey wood,'
 
-def decrypt(h_iv, h_ct):
+    encryptor = Cipher(algorithms.AES(key), modes.CBC(iv)).encryptor()
+    padder = padding.PKCS7(8*blocksize_bytes).padder()
+    padded_plain_text = padder.update(plain_text) 
+    padded_plain_text += padder.finalize()
+    if debug:
+        print(f"Padded Plaintext: {padded_plain_text}")
+        print(f"Plaintext Length: {len(plain_text)}")
+        print(f"Padded Plaintext Length: {len(padded_plain_text)}")
+
+    ciphertext = encryptor.update(padded_plain_text) + encryptor.finalize()
+    
+    return (iv.hex(), ciphertext.hex())
+
+
+def decrypt(
+    key: bytes = KEY,
+    hex_iv: str = IV, 
+    hex_ct: str = '',
+    debug: bool = False) -> str:
     """Decrypts the provided hex string and returns whether or not
     the padding is valid
 
@@ -28,16 +48,28 @@ def decrypt(h_iv, h_ct):
     Returns:
         String: Valid or Invalid
     """
-    cipher_text = bytes.fromhex(h_ct)
-    iv = bytes.fromhex(h_iv)
-    dec_cipher = AES.new(KEY, AES.MODE_CBC, iv)
-    padded_plain_text = dec_cipher.decrypt(cipher_text)
-    if not valid_padding(padded_plain_text):
+    # Convert ct and iv into bytes
+    cipher_text = bytes.fromhex(hex_ct)
+    iv = bytes.fromhex(hex_iv)
+    if debug:
+        print(f"Loaded Key: {key.hex()}")
+        print(f"Loaded IV: {iv.hex()}")
+        print(f"Loaded Ciphertext: {cipher_text.hex()}")
+
+    # Decrypt to give padded plaintext
+    decryptor = Cipher(algorithms.AES(key), modes.CBC(iv)).decryptor()
+    padded_plaintext = decryptor.update(cipher_text) + decryptor.finalize()
+    if debug:
+        print(f"Padded Plaintext: {padded_plaintext}")
+
+    # Check padding
+    if not valid_padding(padded_plaintext):
         return "Invalid Padding"
-    #plain_text = unpad(padded_plain_text, BLOCK_SIZE)
+
     return "Valid"
 
-def valid_padding(padded_plain_text):
+
+def valid_padding(padded_plain_text: bytes) -> bool:
     """Checks for valid PKCS7 padding
 
     Args:
@@ -46,13 +78,19 @@ def valid_padding(padded_plain_text):
     Returns:
         Bool: true if it is a valid pad, false otherwise
     """
-    #get last byte of plain text
+    # Get last byte of plain text
     pad_size = padded_plain_text[-1]
     if (pad_size < 1 or pad_size > 16):
         return False
-    #check that pad_size number of bytes are equal to pad_size
+
+    # Check that pad_size number of bytes are equal to pad_size
     padding = padded_plain_text[len(padded_plain_text) - pad_size:]
     for i in padding:
         if i != pad_size:
             return False
     return True
+
+
+if __name__ == "__main__":
+
+    pass
