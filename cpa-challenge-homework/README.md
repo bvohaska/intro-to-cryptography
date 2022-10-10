@@ -19,6 +19,19 @@ Your submission here (on Canvas) should be simply
 
 Additionally, please submit any source code that you used to complete this assignment. Attach it below the PoC string. Do not share your PoC string with anyone (even within your groups).
 
+## Homework 2b Instructions
+
+Decrypt the ciphertext
+
+```python
+iv = "26d1634eca6a0222fcff1f6d7bc87ddd"
+
+ciphertext = "d6c88784f890d6a24c5bf2f090c0aec7151c970066589f850df329ca127e031f638cbb004c563a6617c7b2fb09f17fc7"
+```
+You have access to a decryption oracle that is not `CCA-secure` and uses PKCS#7 padding at the `/paddingoracle` API. The decryption oracle will respond to decryption queries with `Valid Padding` or `Invalid Padding`. You will receive no other information. PKCS#7 can be treated as PKCS#5 in this scenario.
+
+Using your knoweldge of the CCA-security security game and PKCS#5 from the lecture, you should be able to decrypt this ciphertext.
+
 ## The CPA Challenge Game
 
 Bob is trying to talk to Alice. He is using a `CPA-secure` encryption scheme as indicated by the class. But Bob wants to be more efficient than the natural construction of 
