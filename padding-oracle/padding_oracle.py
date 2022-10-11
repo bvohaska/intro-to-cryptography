@@ -35,7 +35,7 @@ def encrypt(
 
 def decrypt(
     key: bytes = KEY,
-    hex_iv: str = IV, 
+    hex_iv: str = IV.hex(), 
     hex_ct: str = '',
     debug: bool = False) -> str:
     """Decrypts the provided hex string and returns whether or not
@@ -61,7 +61,7 @@ def decrypt(
     padded_plaintext = decryptor.update(cipher_text) + decryptor.finalize()
     if debug:
         print(f"Padded Plaintext: {padded_plaintext}")
-
+    
     # Check padding
     if not valid_padding(padded_plaintext):
         return "Invalid Padding"
