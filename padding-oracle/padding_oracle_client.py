@@ -1,16 +1,7 @@
-from distutils.log import debug
-from os import device_encoding
 import requests
 from typing import Tuple
 from validators import url as check_url
 
-# Query the oracle
-
-# Generate messages
-
-# Query the challenger
-
-# Request a decision from the decision API
 
 #
 # HW 2b
