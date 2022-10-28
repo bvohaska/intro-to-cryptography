@@ -1,7 +1,10 @@
-from unittest import result
 import requests
 from typing import Tuple
 from validators import url as check_url
+
+
+# Local imports
+import padding_oracle
 
 
 #
@@ -9,6 +12,7 @@ from validators import url as check_url
 #
 HW2b_IV = bytearray.fromhex("26d1634eca6a0222fcff1f6d7bc87ddd")
 HW2b_CIPHERTEXT = bytearray.fromhex("d6c88784f890d6a24c5bf2f090c0aec7151c970066589f850df329ca127e031f638cbb004c563a6617c7b2fb09f17fc7")
+HW2b_URL = "https://ineedrandom.com/paddingoracle"
 
 
 class PaddingAttacker():
@@ -17,7 +21,7 @@ class PaddingAttacker():
     def __init__(self, 
         iv:bytearray = HW2b_IV, 
         ciphertext:bytearray = HW2b_CIPHERTEXT, 
-        url:str = "https://ineedrandom.com/paddingoracle",
+        url:str = HW2b_URL,
         local:bool = True
     ) -> None:
         """Initialize a padding attacker
@@ -120,7 +124,6 @@ class PaddingAttacker():
             str: the text of the POST request which should be a simple string
         """
         if local == None and self.local == True:
-            import padding_oracle
             return padding_oracle.decrypt(hex_iv=iv.hex(),hex_ct=ciphertext.hex(), debug=False)
 
         payload = self.create_post_payload(iv.hex(), ciphertext.hex())
@@ -131,13 +134,29 @@ class PaddingAttacker():
         )
 
         if debug:
-            print(f"Web Response - Type: {type(resp.text)}\n Data: {resp.text} \n Stripped Data: {resp.text.strip('\"')}")
+            print(f"Web Response - Type: {type(resp.text)}\n Data: {resp.text}")
 
         return resp.text.strip('\"')
 
 
 def block_party(block1:bytearray, block2:bytearray, attacker:PaddingAttacker, debug:bool = False):
     """The heavy lifting of the padding attack.
+
+    Attempt to decrypt only 1 CBC block. Recall,
+
+        CBC Decrypt ->
+
+                PRF_k( [N-th block cipehrtext] )
+                
+                    XOR 
+                
+                [(N-1)th-Block]
+
+                    =
+
+                [Plain Text]
+
+    Picture: https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#/media/File:CBC_decryption.svg
 
     Args:
         block1 (bytearray): A set of bytes representing the "IV" for the decryption 
@@ -157,54 +176,15 @@ def block_party(block1:bytearray, block2:bytearray, attacker:PaddingAttacker, de
     plaintext_bytes = bytearray([0]*len(block2))
 
     trial_iv = block1.copy()
-    for byte in range(1,17):
 
-        if debug:
-            print(f"On byte: {byte}")
-        
-        # If we know the output bytes of the PRF, go back and 
-        # set the trial_iv bytes so that the PRF bytes XOR iv 
-        # gives us the correct padding byte. 
-        # 
-        #   trial_iv_byte = PRF_byte XOR target_padding_Value
-        #
-        # his works b/c we know,
-        #
-        #   plaintext_byte = trial_iv_byte XOR PRF_byte (<-- this is what the oracle sees)   
-        #                  = PRF_byte XOR target_padding_value XOR PRF_byte
-        #                  = target_padding_value (<-- we want this to be something we know)
-        #
-        # This will only run after we have determined the first 
-        # byte of PRF output.
-        for j in range(byte):
-                trial_iv[-j] = prf_bytes[-j]^byte
-        
-        # Try every value for our trial byte until we get a 
-        # padding validation confirmation from the decryption 
-        # oracle. If we succeed, infer/derive the values of 
-        # the plaintext and PRF bytes (which we can know b/c we
-        # have presumably started from the single padding byte 
-        # and worked our way though the block until we reach 16
-        # padding bytes).
-        for i in range(0,256):
-            attacker.count += 1
-            trial_iv[-byte] = i
-            isValid = attacker.access_decryption_oracle(trial_iv, block2)
-            if isValid == "Valid":
-                prf_byte = trial_iv[-byte]^byte
-                plaintext_byte = prf_byte^block1[-byte]
-                prf_bytes[-byte] = prf_byte
-                plaintext_bytes[-byte] = plaintext_byte
-                if debug:
-                    print(f"PRF Byte: {prf_byte}")
-                    print(f"PT Byte: {chr(plaintext_byte)}")
-                    print(f"Modified IV ({i} steps): {trial_iv}")
-                    print(f"{byte}-th IV byte: {trial_iv[-byte]}")
-                    print(f"Attacker PRF Byte: {prf_bytes[-byte]}")
-                    print(f"Attacker PT Byte: {plaintext_bytes[-byte]}")
-                break
-        if debug:
-            print(f"Plaintext bytes so far: {plaintext_bytes}")
+    # ******************************************************************
+    #
+    # [YOUR CODE HERE]
+    #
+    # You can use attacker.access_decryption_oracle() to reach out to the 
+    # server and test if you have valid padding
+    #
+    # ******************************************************************
     
     return prf_bytes, plaintext_bytes
 
@@ -250,24 +230,29 @@ def hack_gibson(
         print(f"The size of the ciphertext: {len(attacker.ciphertext)}")
 
     # In reverse (last block first), go through each block and and attempt to decrypt
-    for block in range(len(ciphertext_blocks)-1,0, -1):
-        prf, pt = block_party(ciphertext_blocks[block-1], ciphertext_blocks[block], attacker, debug)
-        attacker.plaintext[(block)*16:(block+1)*16] = pt
-        attacker.prf_bytes[(block)*16:(block+1)*16] = prf
+    #
+    #   [YOUR CODE HERE]
+    #
+    # You can use block_party() as a function to decrypt each block
 
     # The last ciphertext block will use the IV so we treat this case sperately
-    prf, pt = block_party(attacker.iv, ciphertext_blocks[0], attacker, debug)
-    attacker.plaintext[:16] = pt
-    attacker.prf_bytes[:16] = prf
+    #
+    #   [YOUR CODE HERE]
+    #
+    # You can use block_party() as a function to decrypt each block
 
     return attacker.plaintext, attacker.prf_bytes
 
 
 if __name__ == "__main__":
 
-    attacker = PaddingAttacker()
+    attacker = PaddingAttacker(
+        iv = HW2b_IV,
+        ciphertext = HW2b_CIPHERTEXT,
+        url = HW2b_URL
+    )
 
-    # Run the padding oracle attack against a local padding oracle (for testing your code)
+    # Run the padding oracle attack against a local padding oracle (for testing your code quickly)
     pt, prf = hack_gibson(attacker)
 
     print(f"Plaintext: {bytes(attacker.plaintext).decode('ascii')}")
