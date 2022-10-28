@@ -1,3 +1,4 @@
+from unittest import result
 import requests
 from typing import Tuple
 from validators import url as check_url
@@ -9,13 +10,14 @@ from validators import url as check_url
 HW2b_IV = bytearray.fromhex("26d1634eca6a0222fcff1f6d7bc87ddd")
 HW2b_CIPHERTEXT = bytearray.fromhex("d6c88784f890d6a24c5bf2f090c0aec7151c970066589f850df329ca127e031f638cbb004c563a6617c7b2fb09f17fc7")
 
+
 class PaddingAttacker():
 
     
     def __init__(self, 
         iv:bytearray = HW2b_IV, 
         ciphertext:bytearray = HW2b_CIPHERTEXT, 
-        url:str = "https://ineedrandom.com/padingoracle",
+        url:str = "https://ineedrandom.com/paddingoracle",
         local:bool = True
     ) -> None:
         """Initialize a padding attacker
@@ -37,20 +39,18 @@ class PaddingAttacker():
         """
         # Do some type checking and input validation
         self.url = url if check_url(url) else None
-        if self.url == None:
-            raise TypeError("URL not a valid url format")
         self.iv = iv if type(iv) == bytearray \
             else \
                 bytearray(iv) if type(iv) == bytes \
             else None
-        if self.iv == None:
-            raise TypeError(f"IV should be a bytearray or bytes. Received: {type(iv)} type")
         self.ciphertext = ciphertext if type(ciphertext) == bytearray \
             else \
                 bytearray(ciphertext) if type(ciphertext) == bytes \
             else None
-        if self.ciphertext == None:
-            raise TypeError(f"Ciphertext should be a bytearray or bytes. Received: {type(ciphertext)}")
+        
+        assert self.url != None, "URL not a valid url format"
+        assert self.iv != None, f"IV should be a bytearray or bytes. Received: {type(iv)} type"
+        assert self.ciphertext != None, f"Ciphertext should be a bytearray or bytes. Received: {type(ciphertext)}"
 
         # Build byte arrays to hold PRF and Plaintext values that we find though the attack
         self.prf_bytes = bytearray([0] * len(ciphertext))
@@ -107,7 +107,7 @@ class PaddingAttacker():
         return blocks
 
 
-    def access_decryption_oracle(self, iv: bytes, ciphertext:bytes, local:bool = None) -> str:
+    def access_decryption_oracle(self, iv: bytes, ciphertext:bytes, local:bool = None, debug:bool = False) -> str:
         """Create a communication interface for the decryption oracle
 
         Args:
@@ -130,7 +130,10 @@ class PaddingAttacker():
             json=payload
         )
 
-        return resp.text
+        if debug:
+            print(f"Web Response - Type: {type(resp.text)}\n Data: {resp.text} \n Stripped Data: {resp.text.strip('\"')}")
+
+        return resp.text.strip('\"')
 
 
 def block_party(block1:bytearray, block2:bytearray, attacker:PaddingAttacker, debug:bool = False):
@@ -200,6 +203,8 @@ def block_party(block1:bytearray, block2:bytearray, attacker:PaddingAttacker, de
                     print(f"Attacker PRF Byte: {prf_bytes[-byte]}")
                     print(f"Attacker PT Byte: {plaintext_bytes[-byte]}")
                 break
+        if debug:
+            print(f"Plaintext bytes so far: {plaintext_bytes}")
     
     return prf_bytes, plaintext_bytes
 
@@ -244,12 +249,14 @@ def hack_gibson(
     if debug:
         print(f"The size of the ciphertext: {len(attacker.ciphertext)}")
 
+    # In reverse (last block first), go through each block and and attempt to decrypt
     for block in range(len(ciphertext_blocks)-1,0, -1):
-        prf, pt = block_party(ciphertext_blocks[block-1], ciphertext_blocks[block], attacker)
+        prf, pt = block_party(ciphertext_blocks[block-1], ciphertext_blocks[block], attacker, debug)
         attacker.plaintext[(block)*16:(block+1)*16] = pt
         attacker.prf_bytes[(block)*16:(block+1)*16] = prf
 
-    prf, pt = block_party(attacker.iv, ciphertext_blocks[0], attacker)
+    # The last ciphertext block will use the IV so we treat this case sperately
+    prf, pt = block_party(attacker.iv, ciphertext_blocks[0], attacker, debug)
     attacker.plaintext[:16] = pt
     attacker.prf_bytes[:16] = prf
 
@@ -260,8 +267,14 @@ if __name__ == "__main__":
 
     attacker = PaddingAttacker()
 
+    # Run the padding oracle attack against a local padding oracle (for testing your code)
     pt, prf = hack_gibson(attacker)
 
     print(f"Plaintext: {bytes(attacker.plaintext).decode('ascii')}")
     print(f"Total number of queries to the decryption oracle: {attacker.count}")
-    
+
+    # Run the padding oracle attack on the server
+    attacker.local = False
+    pt, prf = hack_gibson(attacker,debug=True)
+    print(f"Plaintext: {bytes(attacker.plaintext).decode('ascii')}")
+    print(f"Total number of queries to the decryption oracle: {attacker.count}")
